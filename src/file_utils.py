@@ -37,10 +37,12 @@ def remove_folder(path: str) -> None:
 def get_file_metadata(filepath: str) -> Union[dict, None]:
   """
     Returns the following metadata associated with the given file at 'filepath', if it exists:
+    - 'ctime' - change timestamp
     - 'mtime' - last modified timestamp
     - 'mode'  - permission bits 
     - 'uid'   - user id of the file owner
     - 'gid'   - group id of the file owner
+    - 'size'  - size of file in bytes
     If file doesn't exist, returns None.
   """
   if not os.path.exists(filepath):
@@ -48,10 +50,12 @@ def get_file_metadata(filepath: str) -> Union[dict, None]:
 
   metadata = os.stat(filepath)
   return {
+    "ctime" : metadata.st_ctime,
     "mtime" : metadata.st_mtime,
     "mode"  : metadata.st_mode,
     "uid"   : metadata.st_uid,
     "gid"   : metadata.st_gid,
+    "size"  : metadata.st_size,
   }
 
 def equal_metadata(f1_path: str, f2_path: str) -> bool:
