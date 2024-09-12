@@ -1,14 +1,3 @@
-"""
-  Tests:
-  - test with regular path names
-  - test with weird path names "../../../../../../../passwd" type thing
-  - test deleting a file, and seeing it being deleted in replica
-  - test deleting a folder, and seeing it being deleted in replica
-  - test creating a file in source root + inside nested folders inside source 
-  - test updating a file
-  - test updating a file's metadata and seeing it being updated on the replica as well (mtime, ctime, permissions)
-"""
-
 import argparse
 from src.folder_synchronizer import FolderSynchronizer
 
