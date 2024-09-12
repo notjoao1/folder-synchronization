@@ -50,8 +50,8 @@ def get_file_metadata(filepath: str) -> Union[dict, None]:
 
   metadata = os.stat(filepath)
   return {
-    "ctime" : metadata.st_ctime,
-    "mtime" : metadata.st_mtime,
+    "ctime" : int(metadata.st_ctime),
+    "mtime" : int(metadata.st_mtime),
     "mode"  : metadata.st_mode,
     "uid"   : metadata.st_uid,
     "gid"   : metadata.st_gid,
