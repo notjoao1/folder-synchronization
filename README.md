@@ -1,10 +1,10 @@
 # Folder Synchronization
 
-This repository contains a [python](https://www.python.org/) script to periodically perform one-way synchronization between two folders `source` and `replica`, such that replica will be strictly equal to `source`.
+This repository contains a [python](https://www.python.org/) script to periodically perform one-way synchronization between two folders `source` and `replica`, such that `replica` will be strictly equal to `source`.
 
 ## Installation
 
-- This script requires **python** 3.9 or greater and **PIP**. Refer to [the official python website](https://www.python.org/downloads/) for instructions on how to install both on your machine.
+- This script requires **Python** 3.9 or greater and **PIP**. Refer to [the official python website](https://www.python.org/downloads/) for instructions on how to install both on your machine.
 
 
 ### Windows
@@ -86,4 +86,4 @@ pytest
 - Given the provided replica folder path is in a location the user executing the program cannot access (due to permissions), the program should exit with a non-zero exit code, logging the error correctly.
 
 
-All tests passed on both Linux and Windows.
+✅ All tests passed on both Linux and Windows.
