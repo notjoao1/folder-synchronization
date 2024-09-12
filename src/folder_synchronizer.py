@@ -16,7 +16,7 @@ class FolderSynchronizer:
 
   def periodic_sync(self) -> None:
     """
-      Periodically synchronizes source and replica folder in a periodic manner,
+      Periodically synchronizes source and replica folder,
       according to the given interval. 
     """
     self._logger.info(f"Starting synchronization between source folder '{self.source_path}' and replica folder '{self.replica_path}' every {self.interval} seconds.")
