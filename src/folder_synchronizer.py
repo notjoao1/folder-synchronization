@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+from typing import Union
 from .file_utils import hash_file, copy_file, remove_folder, copy_metadata, equal_metadata
 
 
@@ -18,17 +19,18 @@ class FolderSynchronizer:
       Periodically synchronizes source and replica folder in a periodic manner,
       according to the given interval. 
     """
-    self._logger.info(f"Starting synchronization between source folder '{self.source_path}' and replica folder '{self.replica_path} every {self.interval} seconds.")
+    self._logger.info(f"Starting synchronization between source folder '{self.source_path}' and replica folder '{self.replica_path}' every {self.interval} seconds.")
     while True:
       init = time.time() 
       self.sync_folders()
-      self._logger.info(f"Synchronized replica and source in {time.time() - init:.3f} seconds...")
+      self._logger.info(f"Synchronization between replica and source done in {time.time() - init:.3f} seconds...")
       time.sleep(self.interval)
 
   def sync_folders(self) -> None:
     """
       Performs one-way synchronization between source folder and replica folder. 
     """
+    self._ensure_folders_exist()
     self._sync_source_to_replica()
     self._sync_replica_to_source()
 
@@ -52,7 +54,7 @@ class FolderSynchronizer:
 
         if not os.path.exists(replica_fpath):
           self._logger.info(f"File '{source_fpath}' doesn't exist in replica, copying it over to '{replica_fpath}'...")
-          copy_file(source_fpath, replica_fpath)
+          self._try_copy_file(source_fpath, replica_fpath)
           continue
 
         if not equal_metadata(source_fpath, replica_fpath):
@@ -62,20 +64,23 @@ class FolderSynchronizer:
           # just calculate both replica and source hash and compare them to know if contents changed 
           if source_fpath in self._source_file_index:
             self._logger.debug(f"Hash cache hit for key '{source_fpath}'")
-            source_hash = hash_file(source_fpath)
+            source_hash = self._try_hash_file(source_fpath)
+            if source_hash is None:
+              # skip files we cannot read
+              continue
             if self._source_file_index[source_fpath] != source_hash:
               self._logger.info(f"File contents changed inside '{source_fpath}', copying it over to '{replica_fpath}'...")
-              copy_file(source_fpath, replica_fpath)
+              self._try_copy_file(source_fpath, replica_fpath)
               self._source_file_index[source_fpath] = source_hash
             continue
 
           self._logger.debug(f"Hash cache miss for '{source_fpath}'")
-          source_hash = hash_file(source_fpath)
-          replica_hash = hash_file(replica_fpath)
+          source_hash = self._try_hash_file(source_fpath)
+          replica_hash = self._try_hash_file(replica_fpath)
           self._source_file_index[source_fpath] = source_hash
           if source_hash != replica_hash:
             self._logger.info(f"File contents changed inside '{source_fpath}', copying it over to '{replica_fpath}'...")
-            copy_file(source_fpath, replica_fpath)
+            self._try_copy_file(source_fpath, replica_fpath)
 
 
   def _sync_replica_to_source(self) -> None:
@@ -97,10 +102,67 @@ class FolderSynchronizer:
         if not os.path.exists(source_fpath):
           self._logger.info(f"File '{replica_fpath}' in replica no longer exists in source, removing it...")
           os.remove(replica_fpath)
+  
+  def _try_copy_file(self, source_fpath: str, replica_fpath: str) -> None:
+    """
+      Wraps copy operations around a try except block for dealing with permission errors on particular files,
+      and logs failed operations.
+    """
+    try:
+      copy_file(source_fpath, replica_fpath)
+    except PermissionError as e:
+      self._logger.error(f"Permission error while copying file '{source_fpath} to replica: {e}. Ignoring it.")
+
+  def _try_hash_file(self, filepath: str) -> Union[str, None]:
+    """
+      Wraps the operation of hashing a file around a try except block in the case we cannot read the file,
+      logging failed operations.  
+    """
+    file_hash = None
+    try:
+      file_hash = hash_file(filepath)
+    except PermissionError as e:
+      self._logger.error(f"Permission error while hashing file '{filepath}: {e}.")
+    return file_hash
+
+  def _ensure_folders_exist(self) -> None:
+    """
+      Checks if source folder exists and we have permission to read from it, otherwise exit.
+      Checks if replica folder exists and creates it if we have permission to do so, otherwise exit.
+    """
+    if not os.path.exists(self.source_path):
+        self._logger.critical(f"Source folder '{self.source_path}' doesn't exist, exiting.")
+        exit(1)
+
+    # check if we have read/execute permissions on source folder by listing files inside of it
+    try:
+        os.listdir(self.source_path)
+    except PermissionError:
+        self._logger.critical(f"Cannot access source folder '{self.source_path}', exiting.")
+        exit(1)
+
+    if not os.path.exists(self.replica_path):
+        try:
+            self._logger.info(f"Replica folder '{self.replica_path}' doesn't exist... creating it.")
+            os.makedirs(self.replica_path, exist_ok=True)
+        except PermissionError as e:
+            self._logger.critical(f"Permission error on creating replica folder: {e}... exiting.")
+            exit(1)
+
+    # check if we have write permissions on replica directory by creating an empty file (and cleaning up afterwards)
+    try:
+        test_file = os.path.join(self.replica_path, '.test_write_permission')
+        with open(test_file, 'w') as _:
+            pass
+        os.remove(test_file)
+    except PermissionError:
+        self._logger.critical(f"No write permissions for replica folder '{self.replica_path}'... exiting.")
+        exit(1)
 
   def _setup_logger(self, log_file_path: str = None) -> None:
     """
-      Setup logging for both stdout and, optionally, an output file. 
+      Setup logging for both stderr and, optionally, an output file. 
+      Exits program if missing permissions to create log file at given path.
     """
     self._logger = logging.getLogger(__name__)
     self._logger.setLevel(logging.INFO)
@@ -109,11 +171,16 @@ class FolderSynchronizer:
     stdout_handler = logging.StreamHandler()
     stdout_handler.setLevel(logging.INFO)
     stdout_handler.setFormatter(formatter)
+    self._logger.addHandler(stdout_handler)
+
 
     if log_file_path:
-      file_handler = logging.FileHandler(log_file_path)
+      try:
+        file_handler = logging.FileHandler(log_file_path)
+      except PermissionError as e:
+        self._logger.critical(f"Permission error on creating log file: {e}... exiting.")
+        exit(1)
+
       file_handler.setLevel(logging.INFO)
       file_handler.setFormatter(formatter)
       self._logger.addHandler(file_handler)
-
-    self._logger.addHandler(stdout_handler)
