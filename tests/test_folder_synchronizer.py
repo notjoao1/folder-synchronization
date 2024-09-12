@@ -37,7 +37,7 @@ def replica_folder():
 @pytest.fixture
 def folder_sync() -> FolderSynchronizer:
   """Folder synchronizer fixture with mock source/replica folders"""
-  return FolderSynchronizer('/dev/null', '/dev/null', 10)
+  return FolderSynchronizer(os.devnull, os.devnull, 10)
 
 def test_permission_error_on_source_should_crash(folder_sync: FolderSynchronizer):
   """
@@ -94,7 +94,7 @@ def test_given_valid_source_and_replica_should_be_synchronized(source_folder, re
     Tests that, given a valid source folder with a certain directory structure inside of it,
     its contents should be replicated to a replica folder
   """
-  folder_sync = FolderSynchronizer(source_folder, replica_folder, 10, '/dev/null')
+  folder_sync = FolderSynchronizer(source_folder, replica_folder, 10, os.devnull)
 
   # source_folder 
   # ├── folder1
@@ -123,7 +123,7 @@ def test_given_source_changed_replica_should_be_synchronized(source_folder, repl
     removing a folder with a file inside of it and synchronizing again, the changes should be reflected
     in the replica folder
   """
-  folder_sync = FolderSynchronizer(source_folder, replica_folder, 10, '/dev/null')
+  folder_sync = FolderSynchronizer(source_folder, replica_folder, 10, os.devnull)
 
   # source_folder 
   # ├── folder1
@@ -260,7 +260,7 @@ def test_given_source_folder_changed_file_metadata_replica_should_be_synchronize
   folder_sync.sync_folders()
 
   # change file's ctime and mtime
-  os.utime(os.path.join(source_folder, 'file0'), (time.time(), time.time()))
+  os.utime(os.path.join(source_folder, 'file0'), (time.time() + 10, time.time() + 10))
 
   folder_sync.sync_folders()
 
