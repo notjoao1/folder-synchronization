@@ -37,7 +37,6 @@ def remove_folder(path: str) -> None:
 def get_file_metadata(filepath: str) -> Union[dict, None]:
   """
     Returns the following metadata associated with the given file at 'filepath', if it exists:
-    - 'ctime' - change timestamp
     - 'mtime' - last modified timestamp
     - 'mode'  - permission bits 
     - 'uid'   - user id of the file owner
@@ -50,8 +49,7 @@ def get_file_metadata(filepath: str) -> Union[dict, None]:
 
   metadata = os.stat(filepath)
   return {
-    "ctime" : int(metadata.st_ctime),
-    "mtime" : int(metadata.st_mtime),
+    "mtime" : metadata.st_mtime,
     "mode"  : metadata.st_mode,
     "uid"   : metadata.st_uid,
     "gid"   : metadata.st_gid,
