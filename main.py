@@ -7,9 +7,6 @@
   - test creating a file in source root + inside nested folders inside source 
   - test updating a file
   - test updating a file's metadata and seeing it being updated on the replica as well (mtime, ctime, permissions)
-
-  Error handling! Check for exceptions where it makes sense to check for them
-  CHECK #TODO's!
 """
 
 import argparse

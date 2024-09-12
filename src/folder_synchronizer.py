@@ -130,24 +130,36 @@ class FolderSynchronizer:
       Checks if source folder exists and we have permission to read from it, otherwise exit.
       Checks if replica folder exists and creates it if we have permission to do so, otherwise exit.
     """
+    self._ensure_source_exists_and_has_permission()
+    self._ensure_replica_exists_and_has_permissions()
+  
+  def _ensure_source_exists_and_has_permission(self) -> None:
+    """
+      Checks whether source exists and we have read/execute permissions on it, exits otherwise.
+    """
     if not os.path.exists(self.source_path):
-        self._logger.critical(f"Source folder '{self.source_path}' doesn't exist, exiting.")
-        exit(1)
+      self._logger.critical(f"Source folder '{self.source_path}' doesn't exist, exiting.")
+      exit(1)
 
     # check if we have read/execute permissions on source folder by listing files inside of it
     try:
-        os.listdir(self.source_path)
+      os.listdir(self.source_path)
     except PermissionError:
-        self._logger.critical(f"Cannot access source folder '{self.source_path}', exiting.")
-        exit(1)
-
+      self._logger.critical(f"Cannot access source folder '{self.source_path}', exiting.")
+      exit(1)
+  
+  def _ensure_replica_exists_and_has_permissions(self) -> None:
+    """
+      Checks whether replica exists, and create it if not.
+      If we cannot create it due to permission errors, exit the program.
+    """
     if not os.path.exists(self.replica_path):
-        try:
-            self._logger.info(f"Replica folder '{self.replica_path}' doesn't exist... creating it.")
-            os.makedirs(self.replica_path, exist_ok=True)
-        except PermissionError as e:
-            self._logger.critical(f"Permission error on creating replica folder: {e}... exiting.")
-            exit(1)
+      try:
+        self._logger.info(f"Replica folder '{self.replica_path}' doesn't exist... creating it.")
+        os.makedirs(self.replica_path, exist_ok=True)
+      except PermissionError as e:
+        self._logger.critical(f"Permission error on creating replica folder: {e}... exiting.")
+        exit(1)
 
     # check if we have write permissions on replica directory by creating an empty file (and cleaning up afterwards)
     try:
